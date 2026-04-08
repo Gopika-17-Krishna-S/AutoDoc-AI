@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Delete {{ project.name }} – AutoDoc AI{% endblock %}
+
+{% block content %}
+<div style="max-width: 520px; margin: 4rem auto; text-align: center;">
+    <div class="card">
+        <span style="font-size: 3.5rem; display: block; margin-bottom: 1.25rem;">🗑️</span>
+        <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem;">Delete Project?</h2>
+        <p style="color: var(--text-secondary); margin-bottom: 0.25rem;">You are about to permanently delete:</p>
+        <p style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem; color: var(--text-primary);">{{ project.name }}</p>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 2rem;">This will also delete all <strong style="color: var(--red);">{{ project.endpoints.count }}</strong> parsed endpoints. This action cannot be undone.</p>
+
+        <div style="display: flex; gap: 0.75rem; justify-content: center;">
+            <a href="{% url 'projects:project_detail' project.pk %}" class="btn btn-ghost" style="text-decoration: none;">Cancel</a>
+            <form method="post" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn" style="background: linear-gradient(135deg, #f87171, #ef4444);">Delete Project</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

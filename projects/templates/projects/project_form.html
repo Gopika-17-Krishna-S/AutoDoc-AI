@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}New Project – AutoDoc AI{% endblock %}
+
+{% block extra_style %}
+<style>
+    .form-wrapper { max-width: 600px; margin: 0 auto; }
+    .form-title { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 0.5rem; }
+    .form-subtitle { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 2rem; }
+
+    .upload-box {
+        border: 2px dashed var(--border-bright);
+        border-radius: 14px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: border-color .2s, background .2s;
+    }
+    .upload-box:hover { border-color: var(--blue); background: rgba(79,142,247,0.05); }
+    .upload-box input[type=file] { display: none; }
+    .upload-box-icon { font-size: 2rem; margin-bottom: 0.75rem; display: block; }
+    .upload-box p { color: var(--text-secondary); font-size: 0.875rem; }
+    .upload-box strong { color: var(--blue); cursor: pointer; }
+
+    .or-divider {
+        display: flex; align-items: center; gap: 1rem;
+        margin: 1.5rem 0;
+        color: var(--text-muted); font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em;
+    }
+    .or-divider::before, .or-divider::after {
+        content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrapper animate-in">
+    <p class="form-subtitle"><a href="/" style="color: var(--text-secondary); text-decoration: none;">Dashboard</a> / New Project</p>
+    <h1 class="form-title">Upload a Project</h1>
+    <p style="color: var(--text-secondary); margin-bottom: 2.5rem; font-size: 0.9rem; line-height: 1.7;">
+        Provide a ZIP archive or a GitHub URL and AutoDoc AI will detect & document your API endpoints automatically.
+    </p>
+
+    <div class="card">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="form-group">
+                <label class="form-label">Project Name *</label>
+                {{ form.name }}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                {{ form.description }}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Upload ZIP Archive</label>
+                <label class="upload-box" for="id_source_file">
+                    <span class="upload-box-icon">📦</span>
+                    <p>Drag & drop your ZIP here or <strong>browse files</strong></p>
+                    <p style="margin-top: 0.35rem; font-size: 0.75rem; color: var(--text-muted);">Supports .zip files containing Flask or FastAPI projects</p>
+                    {{ form.source_file }}
+                </label>
+                <input type="file" id="id_source_file" name="source_file" accept=".zip" style="display:none;">
+            </div>
+
+            <div class="or-divider">OR</div>
+
+            <div class="form-group">
+                <label class="form-label">GitHub Repository URL</label>
+                {{ form.github_url }}
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem;">e.g. https://github.com/user/repo</p>
+            </div>
+
+            <div class="divider"></div>
+
+            <button type="submit" class="btn" style="width: 100%; justify-content: center;">🚀 Create Project & Analyze</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

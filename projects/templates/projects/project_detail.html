@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{% block title %}{{ project.name }} – AutoDoc AI{% endblock %}
+
+{% block extra_style %}
+<style>
+    .project-meta {
+        display: flex; gap: 1.5rem; align-items: center;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+    }
+    .meta-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; color: var(--text-secondary); }
+    .meta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 2rem; }
+    @media (max-width: 600px) { .info-grid { grid-template-columns: 1fr; } }
+
+    .info-block {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.25rem;
+    }
+    .info-block-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 0.4rem; }
+    .info-block-value { font-size: 0.9rem; color: var(--text-primary); word-break: break-all; }
+
+    .endpoint-item {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        display: flex; align-items: center; gap: 1rem;
+        transition: background .2s, border-color .2s;
+    }
+    .endpoint-item:hover { background: rgba(255,255,255,0.04); border-color: var(--border-bright); }
+    .endpoint-path { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; color: var(--text-primary); flex: 1; }
+    .endpoint-name { font-size: 0.8rem; color: var(--text-muted); }
+
+    .count-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(79,142,247,0.15);
+        color: var(--blue);
+        font-size: 0.75rem; font-weight: 700;
+        border-radius: 6px; padding: 0.15rem 0.5rem;
+        margin-left: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header animate-in">
+    <div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+            <a href="/" style="color: inherit; text-decoration: none;">Dashboard</a> / {{ project.name }}
+        </p>
+        <h1>{{ project.name }}</h1>
+        <div class="project-meta">
+            <span class="meta-item"><span class="meta-dot"></span> Active</span>
+            <span class="meta-item">📅 {{ project.created_at|date:"M d, Y" }}</span>
+            {% if project.github_url %}<span class="meta-item">🔗 GitHub Connected</span>{% endif %}
+            {% if project.source_file %}<span class="meta-item">📦 ZIP Uploaded</span>{% endif %}
+        </div>
+    </div>
+    <div class="page-header-actions">
+        <form action="{% url 'projects:project_parse' project.pk %}" method="post" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost">⚙ Parse Code</button>
+        </form>
+        <a href="{% url 'projects:project_edit' project.pk %}" class="btn btn-ghost" style="text-decoration: none;">✏️ Edit</a>
+        <a href="{% url 'projects:project_explorer' project.pk %}" class="btn btn-ghost" style="text-decoration: none;">🔭 Explorer</a>
+        <a href="{% url 'projects:project_docs' project.pk %}" class="btn" style="text-decoration: none;">📄 View API Docs</a>
+        <a href="{% url 'projects:project_delete' project.pk %}" class="btn" style="background: linear-gradient(135deg, #f87171, #ef4444); text-decoration: none;">🗑 Delete</a>
+    </div>
+</div>
+
+{% if messages %}
+<div class="animate-in delay-1" style="margin-bottom: 1.5rem;">
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'success' }}">{{ message }}</div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="info-grid animate-in delay-1">
+    <div class="info-block">
+        <div class="info-block-label">Description</div>
+        <div class="info-block-value">{{ project.description|default:"—" }}</div>
+    </div>
+    <div class="info-block">
+        <div class="info-block-label">Source</div>
+        <div class="info-block-value">
+            {% if project.github_url %}
+                <a href="{{ project.github_url }}" target="_blank" style="color: var(--blue);">{{ project.github_url }}</a>
+            {% elif project.source_file %}
+                {{ project.source_file.name }}
+            {% else %}—{% endif %}
+        </div>
+    </div>
+    <div class="info-block">
+        <div class="info-block-label">Total Endpoints</div>
+        <div class="info-block-value" style="font-size: 1.5rem; font-weight: 800;">{{ project.endpoints.count }}</div>
+    </div>
+    <div class="info-block">
+        <div class="info-block-label">Created</div>
+        <div class="info-block-value">{{ project.created_at|date:"M d, Y · H:i" }}</div>
+    </div>
+</div>
+
+<div class="animate-in delay-2">
+    <h2 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;">
+        Endpoints
+        {% if project.endpoints.count %}
+            <span class="count-badge">{{ project.endpoints.count }}</span>
+        {% endif %}
+    </h2>
+    {% if project.endpoints.exists %}
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for ep in project.endpoints.all %}
+        <div class="endpoint-item">
+            {% if ep.method == 'GET' %}<span class="badge badge-get">GET</span>
+            {% elif ep.method == 'POST' %}<span class="badge badge-post">POST</span>
+            {% elif ep.method == 'PUT' %}<span class="badge badge-put">PUT</span>
+            {% elif ep.method == 'PATCH' %}<span class="badge badge-patch">PATCH</span>
+            {% elif ep.method == 'DELETE' %}<span class="badge badge-delete">DELETE</span>
+            {% else %}<span class="badge" style="background: rgba(255,255,255,0.08); color: var(--text-secondary);">{{ ep.method }}</span>
+            {% endif %}
+            <span class="endpoint-path">{{ ep.path }}</span>
+            <span class="endpoint-name">{{ ep.name }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card" style="text-align: center; padding: 3rem 1.5rem;">
+        <span style="font-size: 2.5rem; display: block; margin-bottom: 1rem;">🔍</span>
+        <p style="color: var(--text-secondary);">No endpoints parsed yet. Click <strong>Parse Code</strong> to analyze this project.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

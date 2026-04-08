@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% block title %}API Docs – {{ project.name }} – AutoDoc AI{% endblock %}
+
+{% block extra_style %}
+<style>
+    .category-section { margin-bottom: 2.5rem; }
+    .category-title {
+        display: flex; align-items: center; gap: 0.75rem;
+        margin-bottom: 1rem;
+        font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+        color: var(--text-muted);
+    }
+    .category-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .category-count {
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(255,255,255,0.06); color: var(--text-secondary);
+        font-size: 0.7rem; padding: 0.1rem 0.45rem; border-radius: 5px; font-weight: 600;
+    }
+
+    .endpoint-accordion {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 0.6rem;
+        transition: border-color .2s;
+    }
+    .endpoint-accordion:hover { border-color: var(--border-bright); }
+
+    .endpoint-accordion > summary {
+        list-style: none;
+        padding: 0.9rem 1.25rem;
+        display: flex; align-items: center; gap: 0.9rem;
+        cursor: pointer; outline: none;
+        background: rgba(255,255,255,0.02);
+        transition: background .15s;
+        user-select: none;
+    }
+    .endpoint-accordion > summary:hover { background: rgba(255,255,255,0.04); }
+    .endpoint-accordion[open] > summary { background: rgba(255,255,255,0.04); border-bottom: 1px solid var(--border); }
+    .endpoint-accordion > summary::marker,
+    .endpoint-accordion > summary::-webkit-details-marker { display: none; }
+
+    .ep-path { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; flex: 1; }
+    .ep-name { font-size: 0.78rem; color: var(--text-muted); }
+    .expand-icon { font-size: 0.72rem; color: var(--text-muted); transition: transform .2s; }
+    details[open] .expand-icon { transform: rotate(90deg); }
+
+    .ep-body { padding: 1.5rem 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+
+    .detail-section-title {
+        font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+        color: var(--text-muted); margin-bottom: 0.5rem;
+    }
+    .ep-description {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+        color: var(--text-secondary); font-size: 0.875rem; line-height: 1.7;
+    }
+
+    .meta-strip {
+        display: flex; gap: 2rem; flex-wrap: wrap;
+    }
+    .meta-chunk code {
+        font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+        background: rgba(255,255,255,0.05); padding: 0.2rem 0.55rem;
+        border-radius: 6px; color: var(--violet);
+    }
+
+    .param-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    .param-table th {
+        text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--text-muted); padding: 0.4rem 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .param-table td {
+        padding: 0.55rem 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+        color: var(--text-secondary);
+    }
+    .param-table tr:last-child td { border-bottom: none; }
+    .param-name { font-family: 'JetBrains Mono', monospace; color: var(--cyan) !important; }
+    .param-type-badge {
+        background: rgba(167,139,250,0.15); color: #c4b5fd;
+        padding: 0.1rem 0.45rem; border-radius: 5px; font-size: 0.72rem; font-weight: 600;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .workflow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 1rem; margin-bottom: 3rem; }
+    .workflow-card {
+        background: rgba(79,142,247,0.06); border: 1px solid rgba(79,142,247,0.2);
+        border-radius: 14px; padding: 1.25rem;
+    }
+    .workflow-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .workflow-card p { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+    .section-heading {
+        font-size: 1.15rem; font-weight: 800; margin-bottom: 0.4rem; letter-spacing: -0.3px;
+    }
+    .section-subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem; }
+
+    .method-filter-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .mf-btn {
+        padding: 0.3rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 600;
+        border: 1px solid var(--border); background: transparent;
+        color: var(--text-secondary); font-family: 'Inter', sans-serif;
+        cursor: pointer; transition: all .15s;
+    }
+    .mf-btn:hover, .mf-btn.active { border-color: var(--blue); color: var(--blue); background: rgba(79,142,247,0.1); }
+
+
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ── Breadcrumb + Header ── -->
+<div class="animate-in" style="margin-bottom: 2rem;">
+    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+        <a href="/" style="color: inherit; text-decoration: none;">Dashboard</a> ›
+        <a href="{% url 'projects:project_detail' project.pk %}" style="color: inherit; text-decoration: none;">{{ project.name }}</a> ›
+        API Docs
+    </p>
+    <div class="page-header" style="margin-bottom: 0;">
+        <div>
+            <h1 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.5px;">API Reference</h1>
+            <p style="color: var(--text-secondary); margin-top: 0.3rem;">
+                {{ project.name }} ·
+                {{ project.endpoints.count }} endpoint{{ project.endpoints.count|pluralize }} ·
+                {{ endpoint_groups|length }} categor{{ endpoint_groups|length|pluralize:"y,ies" }}
+            </p>
+        </div>
+        <div class="page-header-actions">
+            <a href="{% url 'projects:project_export_json' project.pk %}" class="btn btn-ghost" style="text-decoration: none;">⬇ Export JSON</a>
+            <a href="{% url 'projects:project_detail' project.pk %}" class="btn btn-ghost" style="text-decoration: none;">← Back</a>
+        </div>
+    </div>
+</div>
+
+{% if project.endpoints.exists %}
+
+<!-- ── Detected Workflows ── -->
+{% if workflows %}
+<div class="animate-in delay-1" style="margin-bottom: 2.5rem;">
+    <p class="section-heading">🔄 Detected Workflows</p>
+    <p class="section-subtitle">AutoDoc AI identified these common API patterns in your codebase.</p>
+    <div class="workflow-grid">
+        {% for wf in workflows %}
+        <div class="workflow-card">
+            <h4>{{ wf.name }}</h4>
+            <p>{{ wf.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ── Grouped Endpoints ── -->
+<div class="animate-in delay-2">
+    <p class="section-heading">📋 Endpoints by Category</p>
+    <p class="section-subtitle">Click any endpoint to expand its full detail, parameters, and description.</p>
+
+    {% for category, eps in endpoint_groups.items %}
+    <div class="category-section">
+        <div class="category-title">
+            {% if category == 'auth' %}🔐{% elif category == 'users' %}👤{% elif category == 'items' %}📦{% elif category == 'posts' %}📝{% elif category == 'admin' %}⚙{% elif category == 'files' %}📁{% elif category == 'orders' %}🛒{% elif category == 'search' %}🔍{% elif category == 'health' %}💚{% elif category == 'settings' %}🎛{% else %}🔗{% endif %}
+            {{ category|title }}
+            <span class="category-count">{{ eps|length }}</span>
+        </div>
+
+        {% for ep in eps %}
+        <details class="endpoint-accordion">
+            <summary>
+                {% if ep.method == 'GET' %}<span class="badge badge-get">GET</span>
+                {% elif ep.method == 'POST' %}<span class="badge badge-post">POST</span>
+                {% elif ep.method == 'PUT' %}<span class="badge badge-put">PUT</span>
+                {% elif ep.method == 'PATCH' %}<span class="badge badge-patch">PATCH</span>
+                {% elif ep.method == 'DELETE' %}<span class="badge badge-delete">DELETE</span>
+                {% else %}<span class="badge" style="background:rgba(255,255,255,0.08);color:var(--text-secondary);">{{ ep.method }}</span>
+                {% endif %}
+                <span class="ep-path">{{ ep.path }}</span>
+                <span class="ep-name">{{ ep.name }}</span>
+                <span class="expand-icon">▶</span>
+            </summary>
+
+            <div class="ep-body">
+                <!-- Description -->
+                <div>
+                    <div class="detail-section-title">📖 Description</div>
+                    <div class="ep-description">
+                        {{ ep.description|default:"No docstring found. Add a docstring to this function and re-parse the project." }}
+                    </div>
+                </div>
+
+                <!-- Meta -->
+                <div class="meta-strip">
+                    <div class="meta-chunk">
+                        <div class="detail-section-title">Function</div>
+                        <code>{{ ep.name }}</code>
+                    </div>
+                    <div class="meta-chunk">
+                        <div class="detail-section-title">Method</div>
+                        <code style="color:var(--cyan);">{{ ep.method }}</code>
+                    </div>
+                    <div class="meta-chunk">
+                        <div class="detail-section-title">Path</div>
+                        <code style="color:var(--green);">{{ ep.path }}</code>
+                    </div>
+                    <div class="meta-chunk">
+                        <div class="detail-section-title">Category</div>
+                        <code style="color:var(--orange);">{{ ep.category|default:"general" }}</code>
+                    </div>
+                </div>
+
+                <!-- Path Parameters -->
+                {% if ep.path_params %}
+                <div>
+                    <div class="detail-section-title">📌 Path Parameters</div>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Location</th>
+                                <th>Required</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for param in ep.path_params %}
+                            <tr>
+                                <td class="param-name">{{ param }}</td>
+                                <td><span class="param-type-badge">any</span></td>
+                                <td><span class="param-type-badge" style="background:rgba(52,211,153,0.12);color:var(--green);">path</span></td>
+                                <td>✅ Yes</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Request note for POST/PUT -->
+                {% if ep.method == 'POST' or ep.method == 'PUT' or ep.method == 'PATCH' %}
+                <div>
+                    <div class="detail-section-title">📤 Request Body</div>
+                    <div class="ep-description" style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: var(--text-muted);">
+                        // Request body schema not yet extracted.<br>
+                        // Re-parse with typed Pydantic models or add docstring annotations for full schema support.
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </details>
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="card animate-in delay-1" style="text-align: center; padding: 4rem 2rem;">
+    <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">📭</span>
+    <h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">No Endpoints Found</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Parse the project source code first to generate API documentation.</p>
+    <a href="{% url 'projects:project_detail' project.pk %}" class="btn" style="text-decoration: none;">← Go Back & Parse</a>
+</div>
+{% endif %}
+{% endblock %}

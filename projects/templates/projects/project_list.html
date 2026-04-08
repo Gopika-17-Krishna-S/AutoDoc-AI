@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard – AutoDoc AI{% endblock %}
+
+{% block extra_style %}
+<style>
+    .hero {
+        text-align: center;
+        padding: 3.5rem 2rem;
+        margin-bottom: 3rem;
+        position: relative;
+    }
+    .hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 50% 0%, rgba(79,142,247,0.1) 0%, transparent 70%);
+        border-radius: 24px;
+        pointer-events: none;
+    }
+    .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: rgba(79,142,247,0.12);
+        border: 1px solid rgba(79,142,247,0.25);
+        color: #7ab4ff;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0.35rem 0.85rem;
+        border-radius: 99px;
+        margin-bottom: 1.25rem;
+    }
+    .hero h1 {
+        font-size: clamp(2rem, 5vw, 3.25rem);
+        font-weight: 900;
+        letter-spacing: -1.5px;
+        line-height: 1.1;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #e0eaff 0%, #a78bfa 60%, #4f8ef7 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .hero p {
+        max-width: 540px;
+        margin: 0 auto 2rem;
+        color: var(--text-secondary);
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+    .stats-row {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-bottom: 3rem;
+        flex-wrap: wrap;
+    }
+    .stat-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        padding: 0.5rem 1.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+    }
+    .stat-pill strong { color: var(--text-primary); }
+
+    .project-card { position: relative; }
+    .project-card-number {
+        position: absolute;
+        top: 1.25rem; right: 1.5rem;
+        font-size: 0.7rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: var(--text-muted);
+        font-weight: 500;
+    }
+    .project-card h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        padding-right: 2.5rem;
+    }
+    .project-card p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; }
+    .project-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+    }
+    .project-card-date { font-size: 0.75rem; color: var(--text-muted); }
+    .project-arrow {
+        width: 28px; height: 28px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.9rem;
+        transition: background .2s, transform .2s;
+    }
+    .card-link:hover .project-arrow { background: var(--gradient); transform: translateX(2px); }
+
+    .empty-state {
+        text-align: center;
+        padding: 5rem 2rem;
+    }
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        display: block;
+        opacity: 0.6;
+    }
+    .empty-state h2 { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.75rem; }
+    .empty-state p { color: var(--text-secondary); margin-bottom: 2rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero animate-in">
+    <div class="hero-badge">⚡ AI-Powered Documentation</div>
+    <h1>Your API<br>Documentation Hub</h1>
+    <p>Upload a Flask or FastAPI project, parse the code, and get beautiful, structured documentation in seconds.</p>
+    {% if projects %}
+        <a href="{% url 'projects:project_create' %}" class="btn">+ Upload New Project</a>
+    {% endif %}
+</div>
+
+{% if projects %}
+<div class="stats-row animate-in delay-1">
+    <div class="stat-pill"><strong>{{ projects.count }}</strong> Project{{ projects.count|pluralize }}</div>
+    <div class="stat-pill">⚡ Instant Parsing</div>
+    <div class="stat-pill">🔗 GitHub Support</div>
+</div>
+
+<div class="grid">
+    {% for project in projects %}
+    <a href="{% url 'projects:project_detail' project.pk %}" class="card-link animate-in delay-{{ forloop.counter }}">
+        <div class="card project-card">
+            <span class="project-card-number">#{{ forloop.counter|stringformat:"02d" }}</span>
+            <h3>{{ project.name }}</h3>
+            <p>{{ project.description|default:"No description provided."|truncatewords:18 }}</p>
+            <div class="project-card-footer">
+                <span class="project-card-date">{{ project.created_at|date:"M d, Y" }}</span>
+                <span class="project-arrow">→</span>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card empty-state animate-in delay-1">
+    <span class="empty-icon">🚀</span>
+    <h2>No projects yet</h2>
+    <p>Upload your first backend project and let AutoDoc AI generate the documentation for you.</p>
+    <a href="{% url 'projects:project_create' %}" class="btn">Get Started</a>
+</div>
+{% endif %}
+{% endblock %}

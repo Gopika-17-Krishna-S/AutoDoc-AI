@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% block title %}Explorer – {{ project.name }} – AutoDoc AI{% endblock %}
+
+{% block extra_style %}
+<style>
+    .explorer-layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @media (max-width: 768px) { .explorer-layout { grid-template-columns: 1fr; } }
+
+    /* Sidebar file tree */
+    .file-tree {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 1.25rem;
+        position: sticky;
+        top: 80px;
+    }
+    .file-tree-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.75rem; }
+    .file-item {
+        display: flex; align-items: center; gap: 0.5rem;
+        padding: 0.45rem 0.6rem; border-radius: 8px;
+        cursor: pointer; text-decoration: none;
+        transition: background .15s;
+        margin-bottom: 0.2rem;
+    }
+    .file-item:hover { background: rgba(255,255,255,0.05); }
+    .file-item.active { background: rgba(79,142,247,0.12); }
+    .file-icon { font-size: 0.9rem; flex-shrink: 0; }
+    .file-name { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--text-secondary); flex: 1; word-break: break-all; }
+    .file-ep-count {
+        background: rgba(255,255,255,0.06); color: var(--text-muted);
+        font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem; border-radius: 4px;
+    }
+
+    /* Summary cards row */
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .summary-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.1rem;
+        text-align: center;
+    }
+    .summary-card-value { font-size: 1.75rem; font-weight: 900; letter-spacing: -0.5px; }
+    .summary-card-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); margin-top: 0.2rem; }
+
+    /* File sections */
+    .file-section {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    .file-section-header {
+        display: flex; align-items: center; gap: 0.75rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255,255,255,0.02);
+    }
+    .file-fullname { font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: var(--text-primary); flex: 1; }
+    .file-ep-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        background: rgba(79,142,247,0.15); color: var(--blue);
+        font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px;
+    }
+    .file-method-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    .ep-row {
+        display: flex; align-items: center; gap: 0.85rem;
+        padding: 0.8rem 1.25rem;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        transition: background .15s;
+    }
+    .ep-row:last-child { border-bottom: none; }
+    .ep-row:hover { background: rgba(255,255,255,0.03); }
+    .ep-fn { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--violet); min-width: 140px; }
+    .ep-path { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; flex: 1; }
+    .ep-cat { font-size: 0.72rem; color: var(--text-muted); }
+    .ep-desc { font-size: 0.8rem; color: var(--text-secondary); padding: 0 1.25rem 0.75rem; line-height: 1.5; }
+
+    /* Features section */
+    .features-section { margin-bottom: 2rem; }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; }
+    .feature-card {
+        background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 1rem;
+        display: flex; flex-direction: column; gap: 0.4rem;
+    }
+    .feature-card-title { font-size: 0.875rem; font-weight: 700; }
+    .feature-card-detail { font-size: 0.78rem; color: var(--text-secondary); }
+
+    /* Workflow section */
+    .workflow-card {
+        background: rgba(79,142,247,0.06); border: 1px solid rgba(79,142,247,0.2); border-radius: 14px; padding: 1.1rem;
+    }
+    .workflow-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .workflow-card p { font-size: 0.8rem; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+    .workflow-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 1rem; margin-top: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="page-header animate-in" style="margin-bottom: 1.5rem;">
+    <div>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem;">
+            <a href="/" style="color: inherit; text-decoration: none;">Dashboard</a> ›
+            <a href="{% url 'projects:project_detail' project.pk %}" style="color: inherit; text-decoration: none;">{{ project.name }}</a> ›
+            Explorer
+        </p>
+        <h1 style="font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px;">Project Explorer</h1>
+        <p style="color: var(--text-secondary); margin-top: 0.25rem; font-size: 0.875rem;">
+            Full breakdown of files, endpoints, and detected features.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a href="{% url 'projects:project_docs' project.pk %}" class="btn btn-ghost" style="text-decoration: none;">📄 API Docs</a>
+        <a href="{% url 'projects:project_detail' project.pk %}" class="btn btn-ghost" style="text-decoration: none;">← Back</a>
+    </div>
+</div>
+
+{% if project.endpoints.exists %}
+
+<!-- Summary row -->
+<div class="summary-row animate-in delay-1">
+    <div class="summary-card">
+        <div class="summary-card-value" style="background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">{{ files|length }}</div>
+        <div class="summary-card-label">Python Files</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-card-value" style="color: var(--green);">{{ project.endpoints.count }}</div>
+        <div class="summary-card-label">Total Endpoints</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-card-value" style="color: var(--violet);">{{ all_categories|length }}</div>
+        <div class="summary-card-label">Categories</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-card-value" style="color: var(--cyan);">{{ all_methods|length }}</div>
+        <div class="summary-card-label">HTTP Methods</div>
+    </div>
+    <div class="summary-card">
+        <div class="summary-card-value" style="color: var(--orange);">{{ workflows|length }}</div>
+        <div class="summary-card-label">Workflows</div>
+    </div>
+</div>
+
+<!-- Main layout: sidebar + content -->
+<div class="explorer-layout animate-in delay-2">
+
+    <!-- Sidebar: file list -->
+    <div class="file-tree">
+        <div class="file-tree-title">📁 Files ({{ files|length }})</div>
+        {% for file in files %}
+        <a href="#file-{{ forloop.counter }}" class="file-item">
+            {% if file.has_routes %}<span class="file-icon">🐍</span>{% else %}<span class="file-icon">📄</span>{% endif %}
+            <span class="file-name" title="{{ file.name }}">{{ file.short_name }}</span>
+            <span class="file-ep-count">{{ file.endpoint_count }}</span>
+        </a>
+        {% endfor %}
+        {% for file in files %}{% if file.name == 'unknown' %}
+        <div style="margin-top: 0.75rem; padding: 0.6rem; background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.25); border-radius: 8px; font-size: 0.72rem; color: var(--orange);">
+            ⚠️ Re-parse to see file names
+        </div>
+        {% endif %}{% endfor %}
+    </div>
+
+    <!-- Main content -->
+    <div>
+
+        <!-- Detected Features -->
+        <div class="features-section">
+            <h2 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem;">⚡ Detected Features</h2>
+            <div class="feature-grid">
+                {% for cat in all_categories %}
+                <div class="feature-card">
+                    <div class="feature-card-title">
+                        {% if cat == 'auth' %}🔐{% elif cat == 'users' %}👤{% elif cat == 'items' %}📦{% elif cat == 'posts' %}📝{% elif cat == 'admin' %}⚙{% elif cat == 'files' %}📁{% elif cat == 'orders' %}🛒{% elif cat == 'search' %}🔍{% elif cat == 'health' %}💚{% elif cat == 'settings' %}🎛{% else %}🔗{% endif %}
+                        {{ cat|title }}
+                    </div>
+                    <div class="feature-card-detail">
+                        {{ category_counts|default:"{}" }}
+                        {% for k, v in category_counts.items %}{% if k == cat %}{{ v }} endpoint{{ v|pluralize }}{% endif %}{% endfor %} detected
+                    </div>
+                </div>
+                {% endfor %}
+                {% for method in all_methods %}
+                <div class="feature-card" style="border-color: rgba(79,142,247,0.2);">
+                    <div class="feature-card-title">
+                        {% if method == 'GET' %}<span class="badge badge-get">GET</span>
+                        {% elif method == 'POST' %}<span class="badge badge-post">POST</span>
+                        {% elif method == 'PUT' %}<span class="badge badge-put">PUT</span>
+                        {% elif method == 'PATCH' %}<span class="badge badge-patch">PATCH</span>
+                        {% elif method == 'DELETE' %}<span class="badge badge-delete">DELETE</span>
+                        {% else %}<span class="badge">{{ method }}</span>{% endif %}
+                    </div>
+                    <div class="feature-card-detail">HTTP method in use</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Workflow Patterns -->
+        {% if workflows %}
+        <div style="margin-bottom: 2rem;">
+            <h2 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 0.4rem;">🔄 Workflow Patterns</h2>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.75rem;">AutoDoc AI detected common API patterns in your project.</p>
+            <div class="workflow-grid">
+                {% for wf in workflows %}
+                <div class="workflow-card">
+                    <h4>{{ wf.name }}</h4>
+                    <p>{{ wf.description }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Files breakdown -->
+        <h2 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 1rem;">🗂 Files with Endpoints</h2>
+        {% for file in files %}
+        <div class="file-section" id="file-{{ forloop.counter }}">
+            <div class="file-section-header">
+                <span style="font-size: 1.1rem;">🐍</span>
+                <span class="file-fullname">{{ file.name }}</span>
+                <div class="file-method-chips">
+                    {% for m in file.methods %}
+                        {% if m == 'GET' %}<span class="badge badge-get">GET</span>
+                        {% elif m == 'POST' %}<span class="badge badge-post">POST</span>
+                        {% elif m == 'PUT' %}<span class="badge badge-put">PUT</span>
+                        {% elif m == 'PATCH' %}<span class="badge badge-patch">PATCH</span>
+                        {% elif m == 'DELETE' %}<span class="badge badge-delete">DELETE</span>
+                        {% else %}<span class="badge">{{ m }}</span>{% endif %}
+                    {% endfor %}
+                </div>
+                <span class="file-ep-badge">{{ file.endpoint_count }} endpoint{{ file.endpoint_count|pluralize }}</span>
+            </div>
+
+            {% for ep in file.endpoints %}
+            <div>
+                <div class="ep-row">
+                    {% if ep.method == 'GET' %}<span class="badge badge-get">GET</span>
+                    {% elif ep.method == 'POST' %}<span class="badge badge-post">POST</span>
+                    {% elif ep.method == 'PUT' %}<span class="badge badge-put">PUT</span>
+                    {% elif ep.method == 'PATCH' %}<span class="badge badge-patch">PATCH</span>
+                    {% elif ep.method == 'DELETE' %}<span class="badge badge-delete">DELETE</span>
+                    {% else %}<span class="badge">{{ ep.method }}</span>{% endif %}
+                    <span class="ep-path">{{ ep.path }}</span>
+                    <span class="ep-fn">{{ ep.name }}</span>
+                    <span class="ep-cat">
+                        {% if ep.category == 'auth' %}🔐{% elif ep.category == 'users' %}👤{% elif ep.category == 'items' %}📦{% elif ep.category == 'posts' %}📝{% elif ep.category == 'admin' %}⚙{% elif ep.category == 'files' %}📁{% elif ep.category == 'orders' %}🛒{% elif ep.category == 'search' %}🔍{% elif ep.category == 'health' %}💚{% elif ep.category == 'settings' %}🎛{% else %}🔗{% endif %}
+                        {{ ep.category|title }}
+                    </span>
+                    {% if ep.path_params %}
+                        <span style="font-size: 0.72rem; color: var(--cyan);">{
+                        {% for p in ep.path_params %}{{ p }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                        }</span>
+                    {% endif %}
+                </div>
+                {% if ep.description %}
+                <div class="ep-desc">💬 {{ ep.description }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+
+    </div>
+</div>
+
+{% else %}
+<div class="card animate-in delay-1" style="text-align: center; padding: 4rem 2rem;">
+    <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">🔍</span>
+    <h2 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.75rem;">Nothing to explore yet</h2>
+    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">Parse the project first to see a file-by-file breakdown of your API.</p>
+    <a href="{% url 'projects:project_detail' project.pk %}" class="btn" style="text-decoration: none;">← Go Back & Parse</a>
+</div>
+{% endif %}
+{% endblock %}

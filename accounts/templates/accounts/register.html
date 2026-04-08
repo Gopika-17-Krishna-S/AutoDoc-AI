@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Register – AutoDoc AI{% endblock %}
+{% block content %}
+<div style="max-width: 440px; margin: 5rem auto;">
+    <div style="text-align: center; margin-bottom: 2rem;">
+        <span style="font-size: 2.5rem;">🚀</span>
+        <h1 style="font-size: 1.75rem; font-weight: 900; letter-spacing: -0.5px; margin-top: 0.5rem;">Get started free</h1>
+        <p style="color: var(--text-secondary); margin-top: 0.25rem;">Create your AutoDoc AI account</p>
+    </div>
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="form-group">
+                <label class="form-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.3rem;">{{ field.help_text }}</p>
+                {% endif %}
+                {% if field.errors %}
+                    <p style="color: var(--red); font-size: 0.78rem; margin-top: 0.35rem;">{{ field.errors|join:", " }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn" style="width: 100%; justify-content: center; margin-top: 0.5rem;">Create Account</button>
+        </form>
+        <p style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-top: 1.25rem;">
+            Already have an account? <a href="/auth/login/" style="color: var(--blue);">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
