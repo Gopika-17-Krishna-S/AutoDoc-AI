@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,13 +95,11 @@
             align-items: center;
             gap: 0.5rem;
         }
-        .nav-logo-icon {
-            width: 28px; height: 28px;
-            background: var(--gradient);
-            border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 0.9rem;
-            -webkit-text-fill-color: white;
+        .nav-logo-img {
+            height: 28px;
+            width: auto;
+            border-radius: 6px;
+            object-fit: contain;
         }
 
         .nav-links { display: flex; align-items: center; gap: 0.5rem; }
@@ -271,7 +270,7 @@
 <body>
     <nav class="navbar">
         <a href="/" class="nav-logo">
-            <span class="nav-logo-icon">⚡</span>
+            <img src="{% static 'auto-logo.png' %}" alt="AutoDoc AI Logo" class="nav-logo-img">
             AutoDoc AI
         </a>
         <div class="nav-links">
